@@ -10,7 +10,7 @@
 
 И вставим это: # X.509 Certificate options
 
-# The organization of the subject. organization = "142.54.160.100"
+"# The organization of the subject. organization = "142.54.160.100"
 
 # The common name of the certificate owner. cn = "Example CA"
 
@@ -24,7 +24,7 @@
 
 # Whether this key will be used to sign other certificates. cert_signing_key
 
-# Whether this key will be used to sign CRLs. crl_signing_key key encipherment encryption_key tls_www_server
+# Whether this key will be used to sign CRLs. crl_signing_key key encipherment encryption_key tls_www_server"
 
 А теперь генерируем ключи: certtool --generate-privkey > ./ocserv-key.pem
 
