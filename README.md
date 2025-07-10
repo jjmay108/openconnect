@@ -1,113 +1,248 @@
-1. Ставим все необходимые пакеты для OpenConnect v1.2.4 sudo apt update && sudo apt install -y vim nano git build-essential libgnutls28-dev libev-dev autoconf automake libtool libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius gawk gnutls-bin iproute2 yajl-tools tcpdump
 
-*ТУТ можно в теории не ставить iperf3 haproxy freeradius, но я ставлю все, чтобы собралось без проблем 2. Клонируем репо последней версии https://gitlab.com/openconnect/ocserv (можно перейти и посмотреть в браузере по тегу какая последняя версия, сейчас 1.2.4) cd ~ && git clone -b 1.2.4 https://gitlab.com/openconnect/ocserv
+1. Ставим все необходимые пакеты для OpenConnect v1.2.4
 
-3. Собираем cd ocserv autoreconf -fvi ./configure && make sudo make install
+sudo apt update && sudo apt install -y vim nano git build-essential libgnutls28-dev libev-dev autoconf automake libtool libpam0g-dev liblz4-dev libseccomp-dev libreadline-dev libnl-route-3-dev libkrb5-dev libradcli-dev libcurl4-gnutls-dev libcjose-dev libjansson-dev liboath-dev libprotobuf-c-dev libtalloc-dev libhttp-parser-dev protobuf-c-compiler gperf iperf3 lcov libuid-wrapper libpam-wrapper libnss-wrapper libsocket-wrapper gss-ntlmssp haproxy iputils-ping freeradius gawk gnutls-bin iproute2 yajl-tools tcpdump
 
-4. Скачаем конфиг cd ~/ocserv/src && wget https://gitlab.com/openconnect/ocserv/-/raw/master/doc/sample.config
+*ТУТ можно в теории не ставить iperf3 haproxy freeradius, но я ставлю все, чтобы собралось без проблем
+2. Клонируем репо последней версии https://gitlab.com/openconnect/ocserv (можно перейти и посмотреть в браузере по тегу какая последняя версия, сейчас 1.2.4)
 
-5. Генерируем сертификаты и ключи сервера Первым делом создаем темплейт для генерации ключей nano ca-cert.cfg
+cd ~ && git clone -b 1.2.4 https://gitlab.com/openconnect/ocserv 
 
-И вставим это: # X.509 Certificate options
+3. Собираем
 
-# The organization of the subject. organization = "142.54.160.100"
+cd ocserv
+autoreconf -fvi
+./configure && make
+sudo make install
 
-# The common name of the certificate owner. cn = "Example CA"
+4. Скачаем конфиг
 
-# The serial number of the certificate. serial = 001
+cd ~/ocserv/src && wget https://gitlab.com/openconnect/ocserv/-/raw/master/doc/sample.config
 
-# In how many days, counting from today, this certificate will expire. Use -1 if there is no expiration date. expiration_days = -1
+5. Генерируем сертификаты и ключи сервера
 
-# Whether this is a CA certificate or not ca
+Первым делом создаем темплейт для генерации ключей
 
-# Whether this certificate will be used to sign data signing_key
+nano ca-cert.cfg
 
-# Whether this key will be used to sign other certificates. cert_signing_key
+И вставим это:
 
-# Whether this key will be used to sign CRLs. crl_signing_key key encipherment encryption_key tls_www_server
+# X.509 Certificate options
 
-А теперь генерируем ключи: certtool --generate-privkey > ./ocserv-key.pem
+# The organization of the subject.
+organization = "142.54.160.100"
+
+# The common name of the certificate owner.
+cn = "Example CA"
+
+# The serial number of the certificate.
+serial = 001
+
+# In how many days, counting from today, this certificate will expire. Use -1 if there is no expiration date.
+expiration_days = -1
+
+# Whether this is a CA certificate or not
+ca
+
+# Whether this certificate will be used to sign data
+signing_key
+
+# Whether this key will be used to sign other certificates.
+cert_signing_key
+
+# Whether this key will be used to sign CRLs.
+crl_signing_key
+key encipherment
+encryption_key
+tls_www_server
+
+А теперь генерируем ключи:
+
+certtool --generate-privkey > ./ocserv-key.pem
 
 certtool --generate-self-signed --load-privkey ocserv-key.pem --template ca-cert.cfg --outfile ocserv-cert.pem
 
-И также создадим темплейт для dh.pem nano dh.conf
+И также создадим темплейт для dh.pem
 
-И вставим это: key_type = RSA key_bits = 2048 dh_bits = 2048
+nano dh.conf
 
-И генерируем dh.pem certtool --generate-dh-params --load-privkey dh.conf --outfile dh.pem
+И вставим это:
 
-6. Теперь создаем АККАУНТЫ VPN Создаем директорию с кофигами внутри ~/ocserv/src mkdir ./clients
+key_type = RSA
+key_bits = 2048
+dh_bits = 2048
 
-Создаем первого пользователя ocpasswd -c ./clients/ocpasswd dmitry
+И генерируем dh.pem
 
-Чтобы добавить клиента, также запускаем с другим именем ocpasswd -c ./clients/ocpasswd test
+certtool --generate-dh-params --load-privkey dh.conf --outfile dh.pem
 
-И проверяем что там уже 2 пользователя: cat ./clients/ocpasswd
+6. Теперь создаем АККАУНТЫ VPN
 
-7. Теперь работаем с конфигом сервера nano ~/ocserv/src/sample.config
+Создаем директорию с кофигами внутри ~/ocserv/src
 
-ВСЕ ПАРАМЕТРЫ ПРОВЕРЯЕМ ПОИСКОМ ЧТОБЫ НЕ ДУБЛИРОВАЛИСЬ! server-cert = ocserv-cert.pem server-key = ocserv-key.pem dh-params = dh.pem ca-cert = ocserv-cert.pem
+mkdir ./clients
 
-ЭТО УДАЛЯЕМ #server-cert = /etc/ocserv/server-cert.pem #server-key = /etc/ocserv/server-key.pem #server-cert = ../tests/certs/server-cert.pem #server-key = ../tests/certs/server-key.pem
+Создаем первого пользователя
 
-auth = "plain[passwd=./clients/ocpasswd]" #auth = "certificate" - ВЫБИРАТЬ ЧТО-ТО ОДНО! либо pass, либо cert, а также важно, что с сертификатами camouflage не работает, его надо отключать camouflage = false, ЛИБО пытаться подружить с двойной аутентификацией и по паролю и по сертификату, что не очень удобно, но возможно кому-то понадобится в корп среде
+ocpasswd -c ./clients/ocpasswd dmitry
 
-tcp-port = 28855 # Порт из бота! #udp-port = 443 - ОТРУБАЕМ udp, потому что он нам не нужен, так как мы москируемся под веб трафик
+Чтобы добавить клиента, также запускаем с другим именем
 
-compression = true max-clients = 0 max-same-clients = 2
+ocpasswd -c ./clients/ocpasswd test
 
-# КОНФИГИ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ ЕСЛИ НУЖНЫ #config-per-user = /home/debian/ocserv/src/clients/configs
+И проверяем что там уже 2 пользователя:
 
-keepalive = 60 try-mtu-discovery = true idle-timeout = 1200 mobile-idle-timeout = 2400
+cat ./clients/ocpasswd
 
-#Тут Либо так #ipv4-network = 10.18.18.0 #ipv4-netmask = 255.255.255.0 #Либо так ipv4-network = 10.18.18.0/24 # НАША ПОДСЕТЬ! Можно сделать любую
+7. Теперь работаем с конфигом сервера
+
+nano ~/ocserv/src/sample.config
+
+ВСЕ ПАРАМЕТРЫ ПРОВЕРЯЕМ ПОИСКОМ ЧТОБЫ НЕ ДУБЛИРОВАЛИСЬ!
+
+server-cert = ocserv-cert.pem
+server-key = ocserv-key.pem
+dh-params = dh.pem
+ca-cert = ocserv-cert.pem
+
+ЭТО УДАЛЯЕМ
+#server-cert = /etc/ocserv/server-cert.pem
+#server-key = /etc/ocserv/server-key.pem
+#server-cert = ../tests/certs/server-cert.pem
+#server-key = ../tests/certs/server-key.pem
+
+
+auth = "plain[passwd=./clients/ocpasswd]"
+#auth = "certificate" - ВЫБИРАТЬ ЧТО-ТО ОДНО! либо pass, либо cert, а также важно, что с сертификатами camouflage не работает, его надо отключать camouflage = false, ЛИБО пытаться подружить с двойной аутентификацией и по паролю и по сертификату, что не очень удобно, но возможно кому-то понадобится в корп среде
+
+tcp-port = 28855  # Порт из бота!
+#udp-port = 443  - ОТРУБАЕМ udp, потому что он нам не нужен, так как мы москируемся под веб трафик
+
+compression = true
+max-clients = 0
+max-same-clients = 2
+
+# КОНФИГИ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ ЕСЛИ НУЖНЫ
+#config-per-user = /home/debian/ocserv/src/clients/configs
+
+keepalive = 60
+try-mtu-discovery = true
+idle-timeout = 1200
+mobile-idle-timeout = 2400
+
+#Тут Либо так
+#ipv4-network = 10.18.18.0
+#ipv4-netmask = 255.255.255.0
+#Либо так
+ipv4-network = 10.18.18.0/24   # НАША ПОДСЕТЬ! Можно сделать любую
 
 tunnel-all-dns = true
 
-dns = 8.8.8.8 dns = 1.1.1.1
+dns = 8.8.8.8    
+dns = 1.1.1.1
 
-# РОУТЫ МОЖЕМ ЗАКОММЕНТИРОВАТЬ ВСЕ, ЕСЛИ ОНИ НАМ НЕ НУЖНЫ, ЕСЛИ НУЖНЫ - СОЗДАЙТЕ СВОЙ ДЛЯ НУЖНОЙ ПОДСЕТИ #route = 10.10.10.0/255.255.255.0 #route = 192.168.0.0/255.255.0.0 #route = fef4:db8:1000:1001::/64 #route = default #no-route = 192.168.5.0/255.255.255.0
+# РОУТЫ МОЖЕМ ЗАКОММЕНТИРОВАТЬ ВСЕ, ЕСЛИ ОНИ НАМ НЕ НУЖНЫ, ЕСЛИ НУЖНЫ - СОЗДАЙТЕ СВОЙ ДЛЯ НУЖНОЙ ПОДСЕТИ
+#route = 10.10.10.0/255.255.255.0
+#route = 192.168.0.0/255.255.0.0
+#route = fef4:db8:1000:1001::/64
+#route = default
+#no-route = 192.168.5.0/255.255.255.0
 
-#for iOS comment line #user-profile = profile.xml
+#for iOS comment line
+#user-profile = profile.xml
 
-camouflage = true camouflage_secret = "mysecretkluch"
+camouflage = true
+camouflage_secret = "mysecretkluch"
 
 #URL СЕРВЕРА В КЛИЕНТЕ, И ПОМЕНЯЙТЕ КЛЮЧ !!! https://142.54.160.100:28855/?mysecretkluch
 
-8. Создаем директорию clients/configs где будем хранить клиентские конфиги с нужными IP и маршрутами nano ./clients/configs/dmitry
+8. Создаем директорию clients/configs где будем хранить клиентские конфиги с нужными IP и маршрутами
 
-explicit-ipv4 = 10.18.18.24 route = 10.17.17.0/24 (к примеру маршрут в соседнюю подсеть wireguard)
+nano ./clients/configs/dmitry
 
-Имя конфигов должны совпадать с именами пользователей, то есть для dmitry будет также имя ./clients/configs/dmitry 9. Включим ipforwarding на сервере sudo nano /etc/sysctl.conf
+explicit-ipv4 = 10.18.18.24
+route = 10.17.17.0/24 (к примеру маршрут в соседнюю подсеть wireguard)
 
-Поправить в конфиге: net.ipv4.ip_forward = 1
+Имя конфигов должны совпадать с именами пользователей, то есть для dmitry будет также имя ./clients/configs/dmitry
+9. Включим ipforwarding на сервере
 
-И выполнить команду: sudo sysctl -p
+sudo nano /etc/sysctl.conf
 
-10. Создаем автозапуск правил iptables (ВНИМАТЕЛЬНО СМОТРИМ НАШУ ПОДСЕТЬ, ЛОКАЛЬНЫЙ IP, И ПОРТ ИЗ КОНФИГА) sudo nano /etc/systemd/system/ocserv-iptables.service
+Поправить в конфиге:
 
-[Unit] Before=network.target [Service] Type=oneshot
+net.ipv4.ip_forward = 1
 
-ExecStart=/usr/sbin/iptables -t nat -A POSTROUTING -s 10.18.18.0/24 ! -d 10.18.18.0/24 -j SNAT --to 10.10.10.101 ExecStart=/usr/sbin/iptables -I INPUT -p tcp --dport 28855 -j ACCEPT ExecStart=/usr/sbin/iptables -I FORWARD -s 10.18.18.0/24 -j ACCEPT ExecStart=/usr/sbin/iptables -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+И выполнить команду:
 
-ExecStop=/usr/sbin/iptables -t nat -D POSTROUTING -s 10.18.18.0/24 ! -d 10.18.18.0/24 -j SNAT --to 10.10.10.101 ExecStop=/usr/sbin/iptables -D INPUT -p tcp --dport 28855 -j ACCEPT ExecStop=/usr/sbin/iptables -D FORWARD -s 10.18.18.0/24 -j ACCEPT ExecStop=/usr/sbin/iptables -D FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo sysctl -p
 
-RemainAfterExit=yes [Install] WantedBy=multi-user.target
+10. Создаем автозапуск правил iptables (ВНИМАТЕЛЬНО СМОТРИМ НАШУ ПОДСЕТЬ, ЛОКАЛЬНЫЙ IP, И ПОРТ ИЗ КОНФИГА)
 
-И команды для запуска сервиса iptables sudo systemctl daemon-reload sudo systemctl enable ocserv-iptables.service sudo systemctl start ocserv-iptables.service sudo systemctl status ocserv-iptables.service
+sudo nano /etc/systemd/system/ocserv-iptables.service
 
-11. Запускаем OpenConnect Server с логированием для первого теста sudo ./ocserv -d 9 -f -c sample.config
+[Unit]
+Before=network.target
+[Service]
+Type=oneshot
 
-12. Подключаемся с помощью клиентов Андроид/iOS и linux Android/iOS в поиске вводим OpenConnect и ставим Cisco AnyConnect либо нативный OpenConnect
+ExecStart=/usr/sbin/iptables -t nat -A POSTROUTING -s 10.18.18.0/24 ! -d 10.18.18.0/24 -j SNAT --to 10.10.10.101
+ExecStart=/usr/sbin/iptables -I INPUT -p tcp --dport 28855 -j ACCEPT
+ExecStart=/usr/sbin/iptables -I FORWARD -s 10.18.18.0/24 -j ACCEPT
+ExecStart=/usr/sbin/iptables -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+ExecStop=/usr/sbin/iptables -t nat -D POSTROUTING -s 10.18.18.0/24 ! -d 10.18.18.0/24 -j SNAT --to 10.10.10.101
+ExecStop=/usr/sbin/iptables -D INPUT -p tcp --dport 28855 -j ACCEPT
+ExecStop=/usr/sbin/iptables -D FORWARD -s 10.18.18.0/24 -j ACCEPT
+ExecStop=/usr/sbin/iptables -D FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
+
+И команды для запуска сервиса iptables
+
+sudo systemctl daemon-reload
+sudo systemctl enable ocserv-iptables.service
+sudo systemctl start ocserv-iptables.service
+sudo systemctl status ocserv-iptables.service
+
+11. Запускаем OpenConnect Server с логированием для первого теста
+
+  sudo ./ocserv -d 9 -f -c sample.config
+
+12. Подключаемся с помощью клиентов Андроид/iOS и linux
+
+Android/iOS в поиске вводим OpenConnect и ставим Cisco AnyConnect либо нативный OpenConnect
 
 Linux: Ставим openconnect из репозитория - утилита
 
 sudo openconnect https://142.54.160.100:28855/?mysecretkluch
 
-Еще вариант GUI: Для gnome лучше плагином networkmanager-openconnect или любым openconnect GUI
+Еще вариант GUI:
+Для gnome лучше плагином networkmanager-openconnect или любым openconnect GUI
 
-13. Проверяем работает ли маскировка camouflage Открываем в браузере https://142.54.160.100:28855/ 14. Создаем сервис ocserv (Можно убрать в ExecStart флаг -d 9, чтобы писалось меньше логов, либо выставить -d 4) sudo nano /etc/systemd/system/ocserv.service
+13. Проверяем работает ли маскировка camouflage
 
-[Unit] After=network.target [Service] WorkingDirectory=/home/debian/ocserv/src Type=simple ExecStart=/home/debian/ocserv/src/ocserv -d 9 -f -c /home/debian/ocserv/src/sample.config ExecStop=/bin/kill $(cat /run/ocserv.pid) Restart=on-failure [Install] WantedBy=multi-user.target
+Открываем в браузере https://142.54.160.100:28855/
+14. Создаем сервис ocserv (Можно убрать в ExecStart флаг -d 9, чтобы писалось меньше логов, либо выставить -d 4)
 
-И команды для запуска сервисов sudo systemctl daemon-reload sudo systemctl enable ocserv.service sudo systemctl start ocserv.service sudo systemctl status ocserv.service
+sudo nano /etc/systemd/system/ocserv.service
+
+[Unit]
+After=network.target
+[Service]
+WorkingDirectory=/home/debian/ocserv/src
+Type=simple
+ExecStart=/home/debian/ocserv/src/ocserv -d 9 -f -c /home/debian/ocserv/src/sample.config
+ExecStop=/bin/kill $(cat /run/ocserv.pid)
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+
+И команды для запуска сервисов
+
+sudo systemctl daemon-reload
+sudo systemctl enable ocserv.service
+sudo systemctl start ocserv.service
+sudo systemctl status ocserv.service
+
